@@ -18,6 +18,12 @@ interface Subject {
     status: "active" | "inactive";
 }
 
+interface Class {
+    id: string;
+    class: string;
+    status: "active" | "inactive";
+}
+
 interface Designation {
     id: string;
     designation: string;
@@ -28,6 +34,7 @@ interface MasterState {
     paymentModes: PaymentMode[];
     departments: Department[];
     subjects: Subject[];
+    classes: Class[];
     designations: Designation[];
     loading: boolean;
 }
@@ -48,6 +55,11 @@ const initialState: MasterState = {
         { id: "2", subject: "English", status: "active" },
         { id: "3", subject: "Hindi", status: "active" },
     ],
+    classes: [
+        { id: "1", class: "1-A", status: "active" },
+        { id: "2", class: "2-B", status: "active" },
+        { id: "3", class: "3-C", status: "active" },
+    ],
     designations: [
         { id: "1", designation: "Manager", status: "active" },
         { id: "2", designation: "Executive", status: "active" },
@@ -60,6 +72,7 @@ const masterSlice = createSlice({
     name: "master",
     initialState,
     reducers: {
+        //payments
         addPaymentMode: (
             state,
             action: PayloadAction<Omit<PaymentMode, "id">>
@@ -84,6 +97,7 @@ const masterSlice = createSlice({
             );
         },
 
+        //departments
         addDepartment: (
             state,
             action: PayloadAction<Omit<Department, "id">>
@@ -108,6 +122,7 @@ const masterSlice = createSlice({
             );
         },
 
+        //subjects
         addSubject: (
             state,
             action: PayloadAction<Omit<Subject, "id">>
@@ -132,6 +147,32 @@ const masterSlice = createSlice({
             );
         },
 
+        //classes
+        addClass: (
+            state,
+            action: PayloadAction<Omit<Class, "id">>
+        ) => {
+            const newClass = {
+                ...action.payload,
+                id: Date.now().toString(),
+            };
+            state.classes.push(newClass);
+        },
+        updateClass: (state, action: PayloadAction<Class>) => {
+            const index = state.classes.findIndex(
+                (cls) => cls.id === action.payload.id
+            );
+            if (index !== -1) {
+                state.classes[index] = action.payload;
+            }
+        },
+        deleteClass: (state, action: PayloadAction<string>) => {
+            state.classes = state.classes.filter(
+                (cls) => cls.id !== action.payload
+            );
+        },
+
+        //designations
         addDesignation: (
             state,
             action: PayloadAction<Omit<Designation, "id">>
@@ -173,7 +214,12 @@ export const {
     addSubject,
     updateSubject,
     deleteSubject,
-    
+
+    //classes
+    addClass,
+    updateClass,
+    deleteClass,
+
     //designation
     addDesignation,
     updateDesignation,

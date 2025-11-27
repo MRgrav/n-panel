@@ -31,6 +31,7 @@ import {
   PersonAdd,
   PersonOff,
   MenuBook,
+  Event,
   Menu as MenuIcon,
   ChevronLeft,
 } from '@mui/icons-material';
@@ -96,6 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onMobileToggle })
       submenu: [
         { text: 'Departments', icon: <Business />, path: '/master/departments' },
         { text: 'Subjects', icon: <MenuBook />, path: '/master/subjects' },
+        { text: 'Classes', icon: <Event />, path: '/master/classes' },
       ],
     },
     {
