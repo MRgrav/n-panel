@@ -6,6 +6,7 @@ import ExEmployees from "../pages/employee/ExEmployees";
 import Departments from "../pages/master/Departments";
 import Designations from "../pages/master/Designations";
 import PaymentModes from "../pages/master/PaymentModes";
+import Subjects from "../pages/master/Subjects";
 
 export const protectedRoutes = [
   {
@@ -21,6 +22,11 @@ export const protectedRoutes = [
   {
     path: 'master/departments',
     element: <Departments />,
+    roles: ['ADMIN', 'Director'],
+  },
+  {
+    path: 'master/subjects',
+    element: <Subjects />,
     roles: ['ADMIN', 'Director'],
   },
   {
