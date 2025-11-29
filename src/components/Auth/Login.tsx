@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { loginFailure, loginStart, loginSuccess } from '../../store/slices/authSlice';
 import api from '../../api/api';
 import { useNavigate } from 'react-router-dom';
-// import logo from '../../assets/images/nitya.png'
+import logo from '../../assets/images/ND_S_w.svg'
 interface User {
  user:{
   id: string;
@@ -141,8 +141,8 @@ const Login = () => {
           <h2 className="text-3xl font-bold mb-6">Welcome to</h2>
           <div className="mb-8">
             <img 
-              className="max-w-80 mx-auto" 
-              src="https://www.naviadesk.in/wp-content/uploads/2024/09/NAVIADESK-logo.png" 
+              className="max-w-96 mx-auto" 
+              src={logo}
               alt="NaviaDesk Logo" 
             />
           </div>
@@ -159,8 +159,8 @@ const Login = () => {
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <div className="flex justify-center mb-6">
               <img
-                src="/assets/images/nitya.png"
-                className="w-14 h-14"
+                src={logo}
+                className="w-18 shadow-2xl rounded-xl"
                 alt="NityaDesk Logo"
               />
             </div>

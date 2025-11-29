@@ -14,6 +14,11 @@ export const protectedRoutes = [
     roles: ['ADMIN'], 
   },
   {
+    path: 'dashboard',
+    element: <Dashboard />,
+    roles: ['ADMIN'], 
+  },
+  {
     path: 'master/payment-modes',
     element: <PaymentModes />,
     roles: ['ADMIN', 'Director'],

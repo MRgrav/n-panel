@@ -34,7 +34,7 @@ import {
   ChevronLeft,
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
- import logo from '../../assets/images/nitya.png'
+ import logo from '../../assets/images/ND_S_w.svg'
 
 const drawerWidth = 280;
 
@@ -156,8 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onMobileToggle })
   const drawerContent = (
     <>
       <SidebarLogo>
-        {/* <p className='text-2xl font-bold'>NMS Logo</p> */}
-        <img className='w-20' src="https://www.naviadesk.in/wp-content/uploads/2024/09/NAVIADESK-logo.png"  alt="" />
+        <img className='w-20' src={logo}  alt="logo" />
       </SidebarLogo>
       
       <Divider sx={{ backgroundColor: 'rgba(255,255,255,0.1)', mx: 1 }} />
