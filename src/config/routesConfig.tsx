@@ -6,6 +6,7 @@ import ExEmployees from "../pages/employee/ExEmployees";
 import Departments from "../pages/master/Departments";
 import Designations from "../pages/master/Designations";
 import PaymentModes from "../pages/master/PaymentModes";
+import Students from "../pages/students/Students";
 
 export const protectedRoutes = [
   {
@@ -16,6 +17,11 @@ export const protectedRoutes = [
   {
     path: 'dashboard',
     element: <Dashboard />,
+    roles: ['ADMIN'], 
+  },
+  {
+    path: 'students',
+    element: <Students />,
     roles: ['ADMIN'], 
   },
   {
