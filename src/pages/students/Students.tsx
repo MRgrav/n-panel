@@ -42,7 +42,6 @@ const generateDummyStudents = () => {
     const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@gmail.com`;
     const promotedToClass = classes[Math.floor(Math.random() * classes.length)];
     
-    // Generate fees based on class
     const baseFee = 1000 + (classes.indexOf(promotedToClass) * 200);
     
     return {

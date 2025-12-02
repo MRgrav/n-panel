@@ -1,4 +1,3 @@
-// types/student.ts
 export interface Student {
     id: string;
     rollNumber: string;

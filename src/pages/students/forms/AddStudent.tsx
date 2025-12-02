@@ -1,4 +1,3 @@
-// AddStudent.tsx
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -63,11 +62,9 @@ const AddStudent: React.FC<AddStudentProps> = ({ open, onClose, onSave }) => {
   const classes = ['Nursery', 'KG', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
   useEffect(() => {
-    // Auto-fill fees based on class
     const feeStructure: { [key: string]: { admission: number; monthly: number } } = {
       'Nursery': { admission: 5000, monthly: 1000 },
       'KG': { admission: 6000, monthly: 1200 },
-      // Add more classes as needed
     };
     
     const fees = feeStructure[formData.promotedToClass] || { admission: 0, monthly: 0 };
@@ -94,28 +91,48 @@ const AddStudent: React.FC<AddStudentProps> = ({ open, onClose, onSave }) => {
     if (!formData.existingRollNumber) return;
     
     setLoading(true);
-    try {
-      // API call to fetch existing student
-      const res = await api.get(`/students/roll/${formData.existingRollNumber}`);
-      setExistingStudent(res.data);
+    setFormData(prev => ({ 
+      ...prev, 
+    }));
+    
+        setExistingStudent({
+          id: '1',
+          rollNumber: formData.existingRollNumber,
+          fullName: 'John Doe',
+          email: 'abc@gmail.com',
+          dateOfBirth: '2010-05-15',
+          gender: 'male',
+          previousSchool: 'ABC School',
+          previousClass: '5th',
+          previousGrade: 'A',
+          promotedToClass: '6th',
+          admissionAmount: 6000,
+          monthlyFees: 1200,
+          admissionDate: '2023-06-01',
+          admissionReceiptNo: 'REC12345',
+          status: 'active',
+          type: 'existing',
+        });
+    // try {
+    //   const res = await api.get(`/students/roll/${formData.existingRollNumber}`);
+    //   setExistingStudent(res.data);
       
-      // Auto-fill form with existing student data
-      setFormData(prev => ({
-        ...prev,
-        fullName: res.data.fullName,
-        email: res.data.email,
-        dateOfBirth: res.data.dateOfBirth,
-        gender: res.data.gender,
-        previousSchool: res.data.previousSchool,
-        previousClass: res.data.previousClass,
-        previousGrade: res.data.previousGrade,
-      }));
-    } catch (error) {
-      console.error('Error fetching student:', error);
-      setExistingStudent(null);
-    } finally {
-      setLoading(false);
-    }
+    //   setFormData(prev => ({
+    //     ...prev,
+    //     fullName: res.data.fullName,
+    //     email: res.data.email,
+    //     dateOfBirth: res.data.dateOfBirth,
+    //     gender: res.data.gender,
+    //     previousSchool: res.data.previousSchool,
+    //     previousClass: res.data.previousClass,
+    //     previousGrade: res.data.previousGrade,
+    //   }));
+    // } catch (error) {
+    //   console.error('Error fetching student:', error);
+    //   setExistingStudent(null);
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   const handleSubmit = async () => {
@@ -189,14 +206,8 @@ const AddStudent: React.FC<AddStudentProps> = ({ open, onClose, onSave }) => {
                     />
                   </Grid>
                   <Grid item xs={3}>
-                    <LoadingButton
-                      fullWidth
-                      variant="contained"
-                      onClick={handleExistingStudentSearch}
-                      loading={loading}
-                    >
+                   
                       Search
-                    </LoadingButton>
                   </Grid>
                 </Grid>
                 
@@ -447,7 +458,9 @@ const AddStudent: React.FC<AddStudentProps> = ({ open, onClose, onSave }) => {
           </Button>
         ) : (
           
+          <Button variant="contained" onClick={handleSubmit}>
             Submit
+          </Button>
         )}
       </DialogActions>
     </Dialog>

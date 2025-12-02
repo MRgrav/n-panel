@@ -6,9 +6,9 @@ import ExEmployees from "../pages/employee/ExEmployees";
 import Classes from "../pages/master/Classes";
 import Departments from "../pages/master/Departments";
 import Designations from "../pages/master/Designations";
-import PaymentModes from "../pages/master/PaymentModes";
 import Subjects from "../pages/master/Subjects";
 import Students from "../pages/students/Students";
+import Timetable from "../pages/timeTable/Timetable";
 
 export const protectedRoutes = [
   {
@@ -22,8 +22,8 @@ export const protectedRoutes = [
     roles: ['ADMIN'], 
   },
   {
-    path: 'master/payment-modes',
-    element: <PaymentModes />,
+    path: 'timetable',
+    element: <Timetable />,
     roles: ['ADMIN', 'Director'],
   },
   {

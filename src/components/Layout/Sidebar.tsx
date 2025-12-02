@@ -37,6 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
  import logo from '../../assets/images/ND_S_w.svg'
+import { Timer } from 'lucide-react';
 
 const drawerWidth = 280;
 
@@ -125,9 +126,9 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onMobileToggle })
       show: true,
     },
     {
-      text: 'Attendance',
-      icon: <Work />,
-      path: '/attendance',
+      text: 'Timetable',
+      icon: <Timer />,
+      path: '/timetable',
       show: true,
     },
     {
