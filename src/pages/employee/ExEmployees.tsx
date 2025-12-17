@@ -6,7 +6,7 @@ import {
 
 import { useNavigate } from 'react-router-dom';
 import CTable from '../../components/Common/CTable';
-import api from '../../api/api';
+import api, { get } from '../../api/api';
 import { UnlockIcon } from 'lucide-react';
 
 const ExEmployees: React.FC = () => {
@@ -51,7 +51,7 @@ const ExEmployees: React.FC = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await api.get('/staff/blocked');
+      const response = await get('/staff/blocked');
       setEmployees(response.data.staff);
     } catch (error) {
       console.error('Error fetching employees:', error);

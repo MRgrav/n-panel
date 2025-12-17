@@ -1,7 +1,6 @@
+// AddEmployee.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-
 import {
   Box,
   Typography,
@@ -11,200 +10,159 @@ import {
   MenuItem,
   Button,
   Card,
-  CardHeader,
   CardContent,
-  Divider,
-  Tabs,
-  Tab,
-  Avatar,
-  IconButton,
+  Stepper,
+  Step,
+  StepLabel,
   Paper,
+  IconButton,
+  Alert,
+  CircularProgress,
+  Avatar,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Divider,
 } from '@mui/material';
 import {
   Person,
   AccountBalance,
   Description,
-  Close,
-  Delete,
-  Visibility,
   CloudUpload,
+  ArrowBack,
+  ArrowForward,
+  CheckCircle,
+  Email,
+  Phone,
+  LocationOn,
+  School,
+  Work,
+  CalendarToday,
 } from '@mui/icons-material';
-import { REACT_APP_BASE_URL } from '../../api/api';
+import { get, post } from '../../api/api';
+import { useAuth } from '../../hooks/useAuth';
 
-interface Designation {
-  _id: string;
-  designation: string;
-}
 
-interface Location {
-  _id: string;
-  locationName: string;
-}
-
-interface BrokerBranch {
-  _id: string;
-  branchName: string;
-}
-
-interface Role {
-  _id: string;
-  role: string;
-}
-
-const AddEmployee = () => {
-
+const AddEmployee: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(0);
-  const [openPreview, setOpenPreview] = useState(false);
-  const [previewFile, setPreviewFile] = useState<string | null>(null);
-  const [previewType, setPreviewType] = useState<'image' | 'pdf' | 'other'>('image');
+  const [activeStep, setActiveStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  
+  const { user } = useAuth();
+  const token = user?.accessToken || '';
 
-  const [role, setRole] = useState<Role[]>([]);
-  const [designation, setDesignation] = useState<Designation[]>([]);
-  const [location, setLocation] = useState<Location[]>([]);
-  const [brokerBranch, setBrokerBranch] = useState<BrokerBranch[]>([]);
+  const steps = ['Basic Info', 'Employment Details', 'Bank & Documents', 'Review'];
 
-  const [inputData, setInputData] = useState({
-    employeeType: '',
-    title: '',
-    role: '',
-    name: '',
+  const [formData, setFormData] = useState({
+    schoolId: '0001',
     employeeId: '',
-    employeePassword: '',
+    title: '',
+    name: '',
     gender: '',
-    address: '',
-    pincode: '',
+    employeeType: '',
+    role: '',
     designation: '',
+    dateOfBirth: '',
+    dateOfJoining: '',
+    fatherHusbandName: '',
+    qualification: '',
+    address: '',
     city: '',
     state: '',
-    panNumber: '',
-    panCard: '',
+    pincode: '',
+    location: '',
     aadharNumber: '',
-    aadharCard: '',
-    dateOfBirth: '',
-    joiningOfDate: '',
-    number: '',
+    panNumber: '',
+    mobile: '',
+    alternateMobile: '',
     email: '',
     alternateEmail: '',
-    alternateNumber: '',
-    department: '',
-    branch: '',
-    bankBranchName: '',
-    location: '',
-    fatherOrHusbandName: '',
-    bqp: '',
-    qualification: '',
-    pf_no: '',
+    brokerBranch: '',
     bankName: '',
-    bankAccount: '',
+    bankBranchName: '',
+    bankAccountNumber: '',
     ifscCode: '',
-    jobOfferLetter: '',
-    joiningLetter: '',
-    nda: '',
-    experienceLetter: '',
-    relievingLetter: '',
-    salarySlip: '',
-    cancelledCheque: '',
-    passport: '',
-    photo: '',
-    sscCertificate: '',
-    hscCertificate: '',
-    graduationCertificate: '',
+    jobOfferLetterUrl: '',
+    joiningLetterUrl: '',
+    ndaUrl: '',
+    experienceLetterUrl: '',
+    relievingLetterUrl: '',
+    salarySlipUrl: '',
+    aadhaarCardUrl: '',
+    panCardUrl: '',
+    cancelledChequeUrl: '',
+    passportUrl: '',
+    sscCertificateUrl: '',
+    hscCertificateUrl: '',
+    graduationCertificateUrl: '',
   });
 
-  const [errors, setErrors] = useState({
-    employeeType: '',
-    title: '',
-    name: '',
-    gender: '',
-    address: '',
-    pincode: '',
-    city: '',
-    state: '',
-    panNumber: '',
-    aadharNumber: '',
-    dateOfBirth: '',
-    joiningOfDate: '',
-    number: '',
-    email: '',
-    designation: '',
-    branch: '',
-    bankBranchName: '',
-    location: '',
-    fatherOrHusbandName: '',
-    qualification: '',
-    pf_no: '',
-    bankName: '',
-    bankAccount: '',
-    ifscCode: '',
-    employeeId: '',
-  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const titles = ['Mr', 'Mrs', 'Miss'];
+  const titles = ['Mr.', 'Mrs.', 'Miss.', 'Dr.', 'Prof.'];
   const genders = ['Male', 'Female', 'Other'];
-  const employeeTypes = ['Full Time', 'Part Time', 'Intern', 'Special Assignee'];
+  const employeeTypes = ['Full-Time', 'Part-Time', 'Contract', 'Intern'];
+  const roles = ['TEACHER', 'ADMIN', 'ACCOUNTANT', 'PRINCIPAL', 'SUPERVISOR', 'OTHER'];
+  const brokerBranches = ['Central', 'North', 'South', 'East', 'West'];
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
+  useEffect(() => {
+    generateEmployeeId();
+  }, []);
+
+  const generateEmployeeId = async () => {
+    try {
+      const response = await get('/staff', {}, token);
+      const employees = response?.staff || [];
+      const latestId = employees.reduce((max: number, emp: any) => {
+        const idNum = parseInt(emp.employeeId?.replace('EMP-', '') || '0');
+        return idNum > max ? idNum : max;
+      }, 44);
+      
+      const newId = `EMP-${String(latestId + 1).padStart(3, '0')}`;
+      setFormData(prev => ({ ...prev, employeeId: newId }));
+    } catch (error) {
+      console.error('Error generating employee ID:', error);
+      setFormData(prev => ({ ...prev, employeeId: 'EMP-001' }));
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep()) {
+      setActiveStep((prevStep) => prevStep + 1);
+    }
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevStep) => prevStep - 1);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setInputData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
     validateField(name, value);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files[0]) {
-      const file = files[0];
-      const base64 = await convertToBase64(file);
-      setInputData((prevData) => ({
-        ...prevData,
-        [name]: base64,
-      }));
+      try {
+        const file = files[0];
+        if (file.size > 5 * 1024 * 1024) {
+          setError('File size should be less than 5MB');
+          return;
+        }
+        
+        // For now, store the file name
+        setFormData(prev => ({ 
+          ...prev, 
+          [`${name}Url`]: `https://files.nityadesk.com/docs/${file.name}` 
+        }));
+        
+      } catch (err) {
+        setError('Error uploading file');
+        console.error(err);
+      }
     }
-  };
-
-  const convertToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  const removeFile = (fieldName: string) => {
-    setInputData((prevData) => ({
-      ...prevData,
-      [fieldName]: '',
-    }));
-  };
-
-  const openFilePreview = (fileData: string) => {
-    if (!fileData) return;
-    
-    setPreviewFile(fileData);
-    
-    // Simple check for file type (could be enhanced)
-    if (fileData.startsWith('data:image')) {
-      setPreviewType('image');
-    } else if (fileData.startsWith('data:application/pdf')) {
-      setPreviewType('pdf');
-    } else {
-      setPreviewType('other');
-    }
-    
-    setOpenPreview(true);
   };
 
   const validateField = (name: string, value: string) => {
@@ -212,888 +170,873 @@ const AddEmployee = () => {
 
     switch (name) {
       case 'name':
-        error = value.length < 1 ? 'Name is required' : '';
-        break;
-      case 'employeeType':
-        error = value.length < 1 ? 'Employee Type is required' : '';
-        break;
-      case 'gender':
-        error = value.length < 1 ? 'Select gender' : '';
+        error = value.trim().length < 2 ? 'Name must be at least 2 characters' : '';
         break;
       case 'email':
-        error = isValidEmail(value) ? '' : 'Email is not valid';
+        error = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? 'Invalid email format' : '';
         break;
-      case 'title':
-        error = value.trim() === '' ? 'Title is required' : '';
-        break;
-      case 'number':
-        error =
-          value.length < 1
-            ? 'Mobile is required!'
-            : value.length !== 10
-            ? 'Mobile must be 10 digits long!'
-            : '';
+      case 'mobile':
+        error = !/^\d{10}$/.test(value) ? 'Mobile must be 10 digits' : '';
         break;
       case 'aadharNumber':
-        error =
-          value.length < 1
-            ? 'Aadhar Number is required!'
-            : value.length !== 12
-            ? 'Aadhar Number must be 12 digits long!'
-            : '';
+        error = !/^\d{12}$/.test(value) ? 'Aadhar must be 12 digits' : '';
         break;
       case 'panNumber':
-        error =
-          value.length < 1
-            ? 'PAN Number is required!'
-            : value.length !== 10
-            ? 'PAN Number must be 10 digits long!'
-            : '';
-        break;
-      case 'ifscCode':
-        error =
-          value.length < 1
-            ? 'IFSC Code is required!'
-            : value.length !== 11 ? 'IFSC Code must be 11 digits long!' : '';
-        break;
-      case 'bankAccount':
-        error =
-          value.length < 1
-            ? 'Bank Account Number is required!'
-            : value.length !== 12
-            ? 'Bank Account Number must be 12 digits long!'
-            : '';
+        error = !/^[A-Z]{5}\d{4}[A-Z]{1}$/.test(value) ? 'Invalid PAN format' : '';
         break;
       case 'pincode':
-        error =
-          value.length < 1
-            ? 'Pincode is required!'
-            : value.length !== 6
-            ? 'Pincode must be 6 digits long!'
-            : '';
+        error = !/^\d{6}$/.test(value) ? 'Pincode must be 6 digits' : '';
         break;
-      case 'city':
-        error = value.trim() === '' ? 'City is required' : '';
+      case 'ifscCode':
+        error = !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(value) ? 'Invalid IFSC code' : '';
         break;
-      case 'state':
-        error = value.trim() === '' ? 'State is required' : '';
-        break;
-      case 'address':
-        error = value.trim() === '' ? 'Address is required' : '';
-        break;
-      case 'dateOfBirth':
-        error = value.trim() === '' ? 'Date of Birth is required' : '';
-        break;
-      case 'joiningOfDate':
-        error = value.trim() === '' ? 'Date of joining is required' : '';
-        break;
-      case 'fatherOrHusbandName':
-        error = value.trim() === '' ? 'Father/ Husband Name is required' : '';
-        break;
-      case 'designation':
-        error = value.trim() === '' ? 'Designation is required' : '';
-        break;
-      case 'branch':
-        error = value.trim() === '' ? 'Branch is required' : '';
-        break;
-      case 'location':
-        error = value.trim() === '' ? 'Location is required' : '';
-        break;
-      case 'bankName':
-        error = value.trim() === '' ? 'Bank Name is required' : '';
-        break;
-      case 'qualification':
-        error = value.trim() === '' ? 'Qualification is required' : '';
-        break;
-      case 'bankBranchName':
-        error = value.trim() === '' ? 'Bank Branch Name is required' : '';
-        break;
-      case 'pf_no':
-        error = value.trim() === '' ? 'PF Number is required' : '';
-        break;
-      default:
+      case 'bankAccountNumber':
+        error = !/^\d{9,18}$/.test(value) ? 'Account number must be 9-18 digits' : '';
         break;
     }
 
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      [name]: error,
-    }));
+    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
-  const isValidEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  const validateStep = () => {
+    const stepValidations = [
+      // Step 0: Basic Info
+      () => {
+        const required = ['title', 'name', 'gender', 'mobile', 'email', 'dateOfBirth'];
+        const newErrors: Record<string, string> = {};
+        required.forEach(field => {
+          if (!formData[field as keyof typeof formData]?.trim()) {
+            newErrors[field] = 'This field is required';
+          }
+        });
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+      },
+      // Step 1: Employment Details
+      () => {
+        const required = ['employeeType', 'role', 'designation', 'dateOfJoining', 'address', 'city', 'state', 'pincode'];
+        const newErrors: Record<string, string> = {};
+        required.forEach(field => {
+          if (!formData[field as keyof typeof formData]?.trim()) {
+            newErrors[field] = 'This field is required';
+          }
+        });
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+      },
+      // Step 2: Bank & Documents (no validation)
+      () => true,
+      // Step 3: Review (no validation)
+      () => true,
+    ];
+
+    return stepValidations[activeStep]();
   };
 
-  const generateUniqueEmployeeId = (existingEmployee: any[]) => {
-    const latestSerialNumber = existingEmployee.reduce((maxSerialNumber, inputData) => {
-      const serialNumber = parseInt(inputData.employeeId.slice(3), 10);
-      return serialNumber > maxSerialNumber ? serialNumber : maxSerialNumber;
-    }, 0);
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    const requiredFields = [
+      'title', 'name', 'gender', 'employeeType', 'role', 'designation',
+      'dateOfBirth', 'dateOfJoining', 'mobile', 'email', 'address',
+      'city', 'state', 'pincode', 'aadharNumber', 'panNumber'
+    ];
 
-    const nextSerialNumber = String(latestSerialNumber + 1).padStart(3, '0');
-    return `S1${nextSerialNumber}`;
+    requiredFields.forEach(field => {
+      if (!formData[field as keyof typeof formData]?.trim()) {
+        newErrors[field] = 'This field is required';
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  useEffect(() => {
-    axios
-      .get(`${REACT_APP_BASE_URL}staff`)
-      .then((response) => {
-        const existingEmployee = response.data.staff;
-        const employeeId = generateUniqueEmployeeId(existingEmployee);
-        setInputData(prev => ({ ...prev, employeeId, employeePassword: employeeId }));
-      })
-      .catch((error) => {
-        console.error(error);
-      });
-  }, []);
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      setError('Please fill all required fields');
+      return;
+    }
 
-  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      const response = await fetch(`https://api.postalpincode.in/pincode/${inputData.pincode}`);
-      if (response.ok) {
-        const data = await response.json();
-        const city = data[0]?.PostOffice?.[0]?.District || '';
-        const state = data[0]?.PostOffice?.[0]?.State || '';
-        setInputData(prev => ({
-          ...prev,
-          city,
-          state,
-        }));
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
+      const payload = {
+        ...formData,
+        dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString().split('T')[0] : '',
+        dateOfJoining: formData.dateOfJoining ? new Date(formData.dateOfJoining).toISOString().split('T')[0] : ''
+      };
 
-  useEffect(() => {
-    if (inputData.pincode.length === 6) {
-      fetchData();
-    }
-  }, [inputData.pincode]);
-
-  useEffect(() => {
-    const fetchDesignation = async () => {
-      try {
-        const response = await axios.get(`${REACT_APP_BASE_URL}designation`);
-        setDesignation(response.data.designation);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    fetchDesignation();
-
-    const fetchLocation = async () => {
-      try {
-        const response = await axios.get(`${REACT_APP_BASE_URL}location`);
-        setLocation(response.data.locations);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    fetchLocation();
-
-    const fetchBrokerBranch = async () => {
-      try {
-        const response = await axios.get(`${REACT_APP_BASE_URL}broker-branch`);
-        setBrokerBranch(response.data.brokerBranch);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    fetchBrokerBranch();
-
-    const fetchRoles = async () => {
-      try {
-        const { data } = await axios.get(`${REACT_APP_BASE_URL}roles`);
-        if (data) {
-          setRole(data.roles);
-        }
-      } catch (error) {
-        console.log('Error ', error);
-      }
-    };
-    fetchRoles();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const response = await axios.post(`${REACT_APP_BASE_URL}staff`, inputData);
-      if (response.status === 201) {
-        // toast({
-        //   title: 'Staff Added Successfully',
-        //   status: 'success',
-        //   duration: 3000,
-        //   isClosable: true,
-        //   position: 'top-right',
-        // });
-        navigate('/current-employee');
-      }
+      await post('/staff', payload, token);
+      setSuccess('Employee added successfully!');
+      
+      setTimeout(() => {
+        navigate('/employee');
+      }, 2000);
+      
     } catch (error: any) {
-      console.error(error?.response);
-      const err = error?.response?.data?.message;
-    //   toast({
-    //     title: 'An error occurred',
-    //     description: err || 'Unknown error occurred',
-    //     status: 'error',
-    //     duration: 3000,
-    //     isClosable: true,
-    //     position: 'top-right',
-    //   });
+      console.error('Error adding employee:', error);
+      setError(error.response?.data?.message || 'Failed to add employee');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const renderBasicDetails = () => (
-    <Grid container spacing={3}>
-      {/* Employee ID */}
-      <Grid item xs={12} sm={6} md={4}>
-        <TextField
-          fullWidth
-          label="Employee ID"
-          name="employeeId"
-          value={inputData.employeeId}
-          onChange={handleChange}
-          InputProps={{
-            readOnly: true,
-          }}
-          error={!!errors.employeeId}
-          helperText={errors.employeeId}
-        />
-      </Grid>
-
-      {/* Title */}
-      <Grid item xs={12} sm={6} md={4}>
-        <TextField
-          select
-          fullWidth
-          label="Title"
-          name="title"
-          value={inputData.title}
-          onChange={handleChange}
-          error={!!errors.title}
-          helperText={errors.title}
-        >
-          <MenuItem value="">Select Title</MenuItem>
-          {titles.map((title) => (
-            <MenuItem key={title} value={title}>
-              {title}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Grid>
-
-      {/* Name */}
-      <Grid item xs={12} sm={6} md={4}>
-        <TextField
-          fullWidth
-          label="Name"
-          name="name"
-          value={inputData.name}
-          onChange={handleChange}
-          error={!!errors.name}
-          helperText={errors.name}
-        />
-      </Grid>
-
-      {/* Gender */}
-      <Grid item xs={12} sm={6} md={4}>
-        <TextField
-          select
-          fullWidth
-          label="Gender"
-          name="gender"
-          value={inputData.gender}
-          onChange={handleChange}
-          error={!!errors.gender}
-          helperText={errors.gender}
-        >
-          <MenuItem value="">Select Gender</MenuItem>
-          {genders.map((gender) => (
-            <MenuItem key={gender} value={gender.toLowerCase()}>
-              {gender}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Grid>
-
-      {/* Employee Type */}
-      <Grid item xs={12} sm={6} md={4}>
-        <TextField
-          select
-          fullWidth
-          label="Employee Type"
-          name="employeeType"
-          value={inputData.employeeType}
-          onChange={handleChange}
-          error={!!errors.employeeType}
-          helperText={errors.employeeType}
-        >
-          <MenuItem value="">Select Employee Type</MenuItem>
-          {employeeTypes.map((type) => (
-            <MenuItem key={type} value={type}>
-              {type}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Grid>
-
-      {/* Role */}
-      <Grid item xs={12} sm={6} md={4}>
-        <TextField
-          select
-          fullWidth
-          label="Role"
-          name="role"
-          value={inputData.role}
-          onChange={handleChange}
-        >
-          <MenuItem value="">Select Role</MenuItem>
-          {role.map((item) => (
-            <MenuItem key={item._id} value={item.role}>
-              {item.role}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Grid>
-
-      {/* Address */}
-      <Grid item xs={12}>
-        <TextField
-          fullWidth
-          label="Address"
-          name="address"
-          value={inputData.address}
-          onChange={handleChange}
-          multiline
-          rows={3}
-          error={!!errors.address}
-          helperText={errors.address}
-        />
-      </Grid>
-
-      {/* Pincode */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="Pincode"
-          name="pincode"
-          value={inputData.pincode}
-          onChange={handleChange}
-          error={!!errors.pincode}
-          helperText={errors.pincode}
-        />
-      </Grid>
-
-      {/* City */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="City"
-          name="city"
-          value={inputData.city}
-          onChange={handleChange}
-          error={!!errors.city}
-          helperText={errors.city}
-        />
-      </Grid>
-
-      {/* State */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="State"
-          name="state"
-          value={inputData.state}
-          onChange={handleChange}
-          error={!!errors.state}
-          helperText={errors.state}
-        />
-      </Grid>
-
-      {/* Date of Birth */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="Date of Birth"
-          name="dateOfBirth"
-          type="date"
-          value={inputData.dateOfBirth}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-          error={!!errors.dateOfBirth}
-          helperText={errors.dateOfBirth}
-        />
-      </Grid>
-
-      {/* Date of Joining */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="Date of Joining"
-          name="joiningOfDate"
-          type="date"
-          value={inputData.joiningOfDate}
-          onChange={handleChange}
-          InputLabelProps={{ shrink: true }}
-          error={!!errors.joiningOfDate}
-          helperText={errors.joiningOfDate}
-        />
-      </Grid>
-
-      {/* Designation */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          select
-          fullWidth
-          label="Designation"
-          name="designation"
-          value={inputData.designation}
-          onChange={handleChange}
-          error={!!errors.designation}
-          helperText={errors.designation}
-        >
-          <MenuItem value="">Select Designation</MenuItem>
-          {designation.map((item) => (
-            <MenuItem key={item._id} value={item.designation}>
-              {item.designation}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Grid>
-
-      {/* Aadhar Number */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="Aadhar Number"
-          name="aadharNumber"
-          value={inputData.aadharNumber}
-          onChange={handleChange}
-          error={!!errors.aadharNumber}
-          helperText={errors.aadharNumber}
-        />
-      </Grid>
-
-      {/* PAN Number */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="PAN Number"
-          name="panNumber"
-          value={inputData.panNumber}
-          onChange={handleChange}
-          error={!!errors.panNumber}
-          helperText={errors.panNumber}
-        />
-      </Grid>
-
-      {/* Mobile */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="Mobile"
-          name="number"
-          value={inputData.number}
-          onChange={handleChange}
-          error={!!errors.number}
-          helperText={errors.number}
-        />
-      </Grid>
-
-      {/* Alternate Mobile */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="Alternate Mobile"
-          name="alternateNumber"
-          value={inputData.alternateNumber}
-          onChange={handleChange}
-        />
-      </Grid>
-
-      {/* Email */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="Email"
-          name="email"
-          value={inputData.email}
-          onChange={handleChange}
-          error={!!errors.email}
-          helperText={errors.email}
-        />
-      </Grid>
-
-      {/* Alternate Email */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="Alternate Email"
-          name="alternateEmail"
-          value={inputData.alternateEmail}
-          onChange={handleChange}
-        />
-      </Grid>
-
-      {/* Broker Branch */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          select
-          fullWidth
-          label="Broker Branch"
-          name="branch"
-          value={inputData.branch}
-          onChange={handleChange}
-          error={!!errors.branch}
-          helperText={errors.branch}
-        >
-          <MenuItem value="">Select Branch</MenuItem>
-          {brokerBranch.map((item) => (
-            <MenuItem key={item._id} value={item.branchName}>
-              {item.branchName}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Grid>
-
-      {/* Location */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          select
-          fullWidth
-          label="Location"
-          name="location"
-          value={inputData.location}
-          onChange={handleChange}
-          error={!!errors.location}
-          helperText={errors.location}
-        >
-          <MenuItem value="">Select Location</MenuItem>
-          {location.map((item) => (
-            <MenuItem key={item._id} value={item.locationName}>
-              {item.locationName}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Grid>
-
-      {/* Father/Husband Name */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="Father/Husband Name"
-          name="fatherOrHusbandName"
-          value={inputData.fatherOrHusbandName}
-          onChange={handleChange}
-          error={!!errors.fatherOrHusbandName}
-          helperText={errors.fatherOrHusbandName}
-        />
-      </Grid>
-
-      {/* Qualification */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="Qualification"
-          name="qualification"
-          value={inputData.qualification}
-          onChange={handleChange}
-          error={!!errors.qualification}
-          helperText={errors.qualification}
-        />
-      </Grid>
-
-      {/* PF Number */}
-      <Grid item xs={12} sm={6} md={3}>
-        <TextField
-          fullWidth
-          label="PF Number"
-          name="pf_no"
-          value={inputData.pf_no}
-          onChange={handleChange}
-          error={!!errors.pf_no}
-          helperText={errors.pf_no}
-        />
-      </Grid>
-    </Grid>
-  );
-
-  const renderBankDetails = () => (
-    <Grid container spacing={3}>
-      {/* Bank Name */}
-      <Grid item xs={12} sm={6} md={4}>
-        <TextField
-          fullWidth
-          label="Bank Name"
-          name="bankName"
-          value={inputData.bankName}
-          onChange={handleChange}
-          error={!!errors.bankName}
-          helperText={errors.bankName}
-        />
-      </Grid>
-
-      {/* Bank Branch Name */}
-      <Grid item xs={12} sm={6} md={4}>
-        <TextField
-          fullWidth
-          label="Bank Branch Name"
-          name="bankBranchName"
-          value={inputData.bankBranchName}
-          onChange={handleChange}
-          error={!!errors.bankBranchName}
-          helperText={errors.bankBranchName}
-        />
-      </Grid>
-
-      {/* Bank Account */}
-      <Grid item xs={12} sm={6} md={4}>
-        <TextField
-          fullWidth
-          label="Bank Account Number"
-          name="bankAccount"
-          value={inputData.bankAccount}
-          onChange={handleChange}
-          error={!!errors.bankAccount}
-          helperText={errors.bankAccount}
-        />
-      </Grid>
-
-      {/* IFSC Code */}
-      <Grid item xs={12} sm={6} md={4}>
-        <TextField
-          fullWidth
-          label="IFSC Code"
-          name="ifscCode"
-          value={inputData.ifscCode}
-          onChange={handleChange}
-          error={!!errors.ifscCode}
-          helperText={errors.ifscCode}
-        />
-      </Grid>
-    </Grid>
-  );
-
-  const renderDocumentSection = (title: string, fields: {name: string, label: string}[]) => (
-    <Box sx={{ mb: 4 }}>
-      <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main', mt: 2 }}>
-        {title}
-      </Typography>
-      <Grid container spacing={2}>
-        {fields.map((field) => (
-          <Grid item xs={12} sm={6} md={4} key={field.name}>
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-              }}
-            >
-              {inputData[field.name as keyof typeof inputData] ? (
-                <>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Chip
-                      label={field.label}
-                      color="primary"
-                      size="small"
-                      sx={{ mr: 1 }}
-                    />
-                    <IconButton
-                      size="small"
-                      onClick={() => openFilePreview(inputData[field.name as keyof typeof inputData])}
-                    >
-                      <Visibility fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => removeFile(field.name)}
-                    >
-                      <Delete fontSize="small" color="error" />
-                    </IconButton>
-                  </Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Document uploaded
+  const renderStepContent = () => {
+    switch (activeStep) {
+      case 0:
+        return (
+          <Box>
+            <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'primary.main', mb: 3 }}>
+              <Person sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Basic Information
+            </Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <Paper sx={{ p: 3, mb: 3, backgroundColor: 'primary.light', color: 'white' }}>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    Employee ID: {formData.employeeId}
                   </Typography>
-                </>
-              ) : (
-                <>
-                  <label htmlFor={`upload-${field.name}`}>
-                    <input
-                      id={`upload-${field.name}`}
-                      name={field.name}
-                      type="file"
-                      onChange={handleFileChange}
-                      style={{ display: 'none' }}
-                    />
-                    <Button
+                  <Typography variant="caption">
+                    This ID will be auto-generated for the new employee
+                  </Typography>
+                </Paper>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  error={!!errors.title}
+                  helperText={errors.title}
+                  variant="outlined"
+                  size="small"
+                >
+                  <MenuItem value="">Select Title</MenuItem>
+                  {titles.map(title => (
+                    <MenuItem key={title} value={title}>{title}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="Full Name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  error={!!errors.name}
+                  helperText={errors.name}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Gender"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                  error={!!errors.gender}
+                  helperText={errors.gender}
+                  variant="outlined"
+                  size="small"
+                >
+                  <MenuItem value="">Select Gender</MenuItem>
+                  {genders.map(gender => (
+                    <MenuItem key={gender} value={gender}>{gender}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="Date of Birth"
+                  name="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={handleChange}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.dateOfBirth}
+                  helperText={errors.dateOfBirth}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="Mobile"
+                  name="mobile"
+                  value={formData.mobile}
+                  onChange={handleChange}
+                  error={!!errors.mobile}
+                  helperText={errors.mobile}
+                  variant="outlined"
+                  size="small"
+                  InputProps={{
+                    startAdornment: <Phone fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />,
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  error={!!errors.email}
+                  helperText={errors.email}
+                  variant="outlined"
+                  size="small"
+                  InputProps={{
+                    startAdornment: <Email fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />,
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Alternate Mobile"
+                  name="alternateMobile"
+                  value={formData.alternateMobile}
+                  onChange={handleChange}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Alternate Email"
+                  name="alternateEmail"
+                  type="email"
+                  value={formData.alternateEmail}
+                  onChange={handleChange}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Father/Husband Name"
+                  name="fatherHusbandName"
+                  value={formData.fatherHusbandName}
+                  onChange={handleChange}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        );
+
+      case 1:
+        return (
+          <Box>
+            <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'primary.main', mb: 3 }}>
+              <Work sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Employment Details
+            </Typography>
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Employee Type"
+                  name="employeeType"
+                  value={formData.employeeType}
+                  onChange={handleChange}
+                  error={!!errors.employeeType}
+                  helperText={errors.employeeType}
+                  variant="outlined"
+                  size="small"
+                >
+                  <MenuItem value="">Select Type</MenuItem>
+                  {employeeTypes.map(type => (
+                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  error={!!errors.role}
+                  helperText={errors.role}
+                  variant="outlined"
+                  size="small"
+                >
+                  <MenuItem value="">Select Role</MenuItem>
+                  {roles.map(role => (
+                    <MenuItem key={role} value={role}>{role}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="Designation"
+                  name="designation"
+                  value={formData.designation}
+                  onChange={handleChange}
+                  error={!!errors.designation}
+                  helperText={errors.designation}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="Date of Joining"
+                  name="dateOfJoining"
+                  type="date"
+                  value={formData.dateOfJoining}
+                  onChange={handleChange}
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.dateOfJoining}
+                  helperText={errors.dateOfJoining}
+                  variant="outlined"
+                  size="small"
+                  InputProps={{
+                    startAdornment: <CalendarToday fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />,
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="Qualification"
+                  name="qualification"
+                  value={formData.qualification}
+                  onChange={handleChange}
+                  variant="outlined"
+                  size="small"
+                  InputProps={{
+                    startAdornment: <School fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />,
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="Location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  variant="outlined"
+                  size="small"
+                  InputProps={{
+                    startAdornment: <LocationOn fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />,
+                  }}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  multiline
+                  rows={3}
+                  error={!!errors.address}
+                  helperText={errors.address}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="City"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  error={!!errors.city}
+                  helperText={errors.city}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="State"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  error={!!errors.state}
+                  helperText={errors.state}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="Pincode"
+                  name="pincode"
+                  value={formData.pincode}
+                  onChange={handleChange}
+                  error={!!errors.pincode}
+                  helperText={errors.pincode}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={6}>
+                <TextField
+                  fullWidth
+                  label="Aadhar Number"
+                  name="aadharNumber"
+                  value={formData.aadharNumber}
+                  onChange={handleChange}
+                  error={!!errors.aadharNumber}
+                  helperText={errors.aadharNumber}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={6}>
+                <TextField
+                  fullWidth
+                  label="PAN Number"
+                  name="panNumber"
+                  value={formData.panNumber}
+                  onChange={handleChange}
+                  error={!!errors.panNumber}
+                  helperText={errors.panNumber}
+                  variant="outlined"
+                  size="small"
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        );
+
+      case 2:
+        return (
+          <Box>
+            <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'primary.main', mb: 3 }}>
+              <AccountBalance sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Bank & Documents
+            </Typography>
+            
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Bank Details
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6} md={4}>
+                  <TextField
+                    fullWidth
+                    label="Bank Name"
+                    name="bankName"
+                    value={formData.bankName}
+                    onChange={handleChange}
+                    variant="outlined"
+                    size="small"
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={4}>
+                  <TextField
+                    fullWidth
+                    label="Bank Branch"
+                    name="bankBranchName"
+                    value={formData.bankBranchName}
+                    onChange={handleChange}
+                    variant="outlined"
+                    size="small"
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={4}>
+                  <TextField
+                    fullWidth
+                    label="Account Number"
+                    name="bankAccountNumber"
+                    value={formData.bankAccountNumber}
+                    onChange={handleChange}
+                    error={!!errors.bankAccountNumber}
+                    helperText={errors.bankAccountNumber}
+                    variant="outlined"
+                    size="small"
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={4}>
+                  <TextField
+                    fullWidth
+                    label="IFSC Code"
+                    name="ifscCode"
+                    value={formData.ifscCode}
+                    onChange={handleChange}
+                    error={!!errors.ifscCode}
+                    helperText={errors.ifscCode}
+                    variant="outlined"
+                    size="small"
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6} md={4}>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Broker Branch"
+                    name="brokerBranch"
+                    value={formData.brokerBranch}
+                    onChange={handleChange}
+                    variant="outlined"
+                    size="small"
+                  >
+                    <MenuItem value="">Select Branch</MenuItem>
+                    {brokerBranches.map(branch => (
+                      <MenuItem key={branch} value={branch}>{branch}</MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Divider sx={{ my: 3 }} />
+
+            <Box>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Documents
+              </Typography>
+              <Grid container spacing={2}>
+                {[
+                  { name: 'jobOfferLetterUrl', label: 'Job Offer Letter' },
+                  { name: 'joiningLetterUrl', label: 'Joining Letter' },
+                  { name: 'ndaUrl', label: 'NDA' },
+                  { name: 'experienceLetterUrl', label: 'Experience Letter' },
+                  { name: 'relievingLetterUrl', label: 'Relieving Letter' },
+                  { name: 'salarySlipUrl', label: 'Salary Slip' },
+                  { name: 'aadhaarCardUrl', label: 'Aadhar Card' },
+                  { name: 'panCardUrl', label: 'PAN Card' },
+                  { name: 'cancelledChequeUrl', label: 'Cancelled Cheque' },
+                ].map((doc, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <Paper
                       variant="outlined"
-                      component="span"
-                      startIcon={<CloudUpload />}
-                      sx={{ mb: 1 }}
+                      sx={{
+                        p: 2,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        borderRadius: 2,
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          boxShadow: 1,
+                        }
+                      }}
                     >
-                      Upload {field.label}
-                    </Button>
-                  </label>
-                  <Typography variant="caption" color="text.secondary">
-                    No document uploaded
-                  </Typography>
-                </>
-              )}
+                      {formData[doc.name as keyof typeof formData] ? (
+                        <Chip
+                          label="Uploaded"
+                          color="success"
+                          size="small"
+                          icon={<CheckCircle />}
+                          sx={{ mb: 1 }}
+                        />
+                      ) : (
+                        <label htmlFor={`upload-${doc.name}`} style={{ width: '100%' }}>
+                          <input
+                            id={`upload-${doc.name}`}
+                            name={doc.name.replace('Url', '')}
+                            type="file"
+                            onChange={handleFileChange}
+                            style={{ display: 'none' }}
+                            accept=".pdf,.jpg,.jpeg,.png"
+                          />
+                          <Button
+                            variant="outlined"
+                            component="span"
+                            startIcon={<CloudUpload />}
+                            fullWidth
+                            sx={{
+                              textTransform: 'none',
+                              borderRadius: 2,
+                            }}
+                          >
+                            Upload {doc.label}
+                          </Button>
+                        </label>
+                      )}
+                      <Typography variant="caption" color="text.secondary" align="center" sx={{ mt: 1 }}>
+                        {doc.label}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          </Box>
+        );
+
+      case 3:
+        return (
+          <Box>
+            <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'primary.main', mb: 3 }}>
+              <Description sx={{ mr: 1, verticalAlign: 'middle' }} />
+              Review Details
+            </Typography>
+            
+            <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Personal Information
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">Name</Typography>
+                  <Typography variant="body1">{formData.title} {formData.name}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">Gender</Typography>
+                  <Typography variant="body1">{formData.gender}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">Date of Birth</Typography>
+                  <Typography variant="body1">{formData.dateOfBirth}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">Mobile</Typography>
+                  <Typography variant="body1">{formData.mobile}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">Email</Typography>
+                  <Typography variant="body1">{formData.email}</Typography>
+                </Grid>
+              </Grid>
             </Paper>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
-  );
 
-  const renderDocumentDetails = () => (
-    <>
-      {renderDocumentSection('Employer Documents', [
-        { name: 'jobOfferLetter', label: 'Job Offer Letter' },
-        { name: 'joiningLetter', label: 'Joining Letter' },
-        { name: 'nda', label: 'NDA' },
-      ])}
+            <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Employment Information
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">Employee ID</Typography>
+                  <Chip label={formData.employeeId} color="primary" size="small" />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">Role</Typography>
+                  <Typography variant="body1">{formData.role}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">Designation</Typography>
+                  <Typography variant="body1">{formData.designation}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">Employee Type</Typography>
+                  <Typography variant="body1">{formData.employeeType}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary">Date of Joining</Typography>
+                  <Typography variant="body1">{formData.dateOfJoining}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary">Address</Typography>
+                  <Typography variant="body1">{formData.address}, {formData.city}, {formData.state} - {formData.pincode}</Typography>
+                </Grid>
+              </Grid>
+            </Paper>
 
-      {renderDocumentSection('Ex-Employee Documents', [
-        { name: 'experienceLetter', label: 'Experience Letter' },
-        { name: 'relievingLetter', label: 'Relieving Letter' },
-        { name: 'salarySlip', label: 'Salary Slip' },
-      ])}
+            <Paper sx={{ p: 3, borderRadius: 2 }}>
+              <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                Documents Status
+              </Typography>
+              <Grid container spacing={1}>
+                {[
+                  'jobOfferLetterUrl', 'joiningLetterUrl', 'ndaUrl',
+                  'aadhaarCardUrl', 'panCardUrl', 'cancelledChequeUrl'
+                ].map((doc) => (
+                  <Grid item xs={12} sm={6} md={4} key={doc}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <CheckCircle 
+                        fontSize="small" 
+                        color={formData[doc as keyof typeof formData] ? "success" : "disabled"} 
+                      />
+                      <Typography variant="body2">
+                        {doc.replace('Url', '').replace(/([A-Z])/g, ' $1').trim()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Paper>
+          </Box>
+        );
 
-      {renderDocumentSection('KYC Documents', [
-        { name: 'aadharCard', label: 'Aadhar Card' },
-        { name: 'panCard', label: 'PAN Card' },
-        { name: 'cancelledCheque', label: 'Cancelled Cheque' },
-        { name: 'passport', label: 'Passport' },
-        { name: 'sscCertificate', label: 'SSC Certificate' },
-        { name: 'hscCertificate', label: 'HSC Certificate' },
-        { name: 'graduationCertificate', label: 'Graduation Certificate' },
-      ])}
-    </>
-  );
+      default:
+        return null;
+    }
+  };
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Card>
-        <CardHeader
-          title="Add Employee Details"
-          titleTypographyProps={{ variant: 'h5', fontWeight: 'bold' }}
-          sx={{ backgroundColor: 'primary.main', color: 'white' }}
-          action={
-            <TextField
-              select
-              variant="outlined"
-              size="small"
-              sx={{ 
-                backgroundColor: 'white',
-                minWidth: 200,
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: 'transparent',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'transparent',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: 'transparent',
-                  },
-                },
-              }}
-              name="role"
-              value={inputData.role}
-              onChange={handleChange}
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Card sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+        <CardContent sx={{ p: 4 }}>
+          {/* Header */}
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h4" fontWeight="bold" gutterBottom>
+              Add New Employee
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Fill in the employee details step by step
+            </Typography>
+          </Box>
+
+          {/* Stepper */}
+          <Stepper activeStep={activeStep} sx={{ mb: 5 }}>
+            {steps.map((label, index) => (
+              <Step key={label}>
+                <StepLabel 
+                  StepIconProps={{
+                    sx: {
+                      '&.Mui-completed': { color: 'success.main' },
+                      '&.Mui-active': { color: 'primary.main' },
+                    }
+                  }}
+                >
+                  {label}
+                </StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+
+          {/* Alerts */}
+          {error && (
+            <Alert 
+              severity="error" 
+              sx={{ mb: 3, borderRadius: 2 }} 
+              onClose={() => setError(null)}
             >
-              <MenuItem value="">Select Role</MenuItem>
-              {role.map((item) => (
-                <MenuItem key={item._id} value={item.role}>
-                  {item.role}
-                </MenuItem>
-              ))}
-            </TextField>
-          }
-        />
-        <CardContent>
-          <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
-            <Tab label="Basic Details" icon={<Person />} />
-            <Tab label="Bank Details" icon={<AccountBalance />} />
-            <Tab label="Document Details" icon={<Description />} />
-          </Tabs>
+              {error}
+            </Alert>
+          )}
+          
+          {success && (
+            <Alert 
+              severity="success" 
+              sx={{ mb: 3, borderRadius: 2 }} 
+              onClose={() => setSuccess(null)}
+            >
+              {success}
+            </Alert>
+          )}
 
-          <form onSubmit={handleSubmit}>
-            {activeTab === 0 && renderBasicDetails()}
-            {activeTab === 1 && renderBankDetails()}
-            {activeTab === 2 && renderDocumentDetails()}
+          {/* Form Content */}
+          {renderStepContent()}
 
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+          {/* Navigation Buttons */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 5 }}>
+            <Button
+              variant="outlined"
+              onClick={handleBack}
+              disabled={activeStep === 0 || loading}
+              startIcon={<ArrowBack />}
+              sx={{
+                borderRadius: 2,
+                px: 4,
+                py: 1.5,
+                textTransform: 'none',
+                fontWeight: 'bold',
+              }}
+            >
+              Back
+            </Button>
+            
+            {activeStep === steps.length - 1 ? (
               <Button
-                variant="outlined"
-                color="secondary"
-                onClick={() => navigate('/current-employee')}
-                sx={{ mr: 2 }}
+                variant="contained"
+                onClick={handleSubmit}
+                disabled={loading}
+                sx={{
+                  borderRadius: 2,
+                  px: 4,
+                  py: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a3d92 100%)',
+                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6)',
+                  },
+                  '&:disabled': {
+                    background: 'grey.300',
+                  }
+                }}
+                startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CheckCircle />}
               >
-                Cancel
+                {loading ? 'Saving...' : 'Submit Employee'}
               </Button>
-              <Button type="submit" variant="contained" color="primary">
-                Save
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                sx={{
+                  borderRadius: 2,
+                  px: 4,
+                  py: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a3d92 100%)',
+                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6)',
+                  }
+                }}
+                endIcon={<ArrowForward />}
+              >
+                Next
               </Button>
-            </Box>
-          </form>
+            )}
+          </Box>
         </CardContent>
       </Card>
-
-      {/* Document Preview Dialog */}
-      <Dialog open={openPreview} onClose={() => setOpenPreview(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Document Preview
-          <IconButton
-            aria-label="close"
-            onClick={() => setOpenPreview(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {previewType === 'image' && (
-            <img src={previewFile || ''} alt="Preview" style={{ width: '100%', height: 'auto' }} />
-          )}
-          {previewType === 'pdf' && (
-            <embed
-              src={previewFile || ''}
-              type="application/pdf"
-              width="100%"
-              height="600px"
-            />
-          )}
-          {previewType === 'other' && (
-            <Typography>This file type cannot be previewed. Please download the file to view it.</Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenPreview(false)}>Close</Button>
-          <Button 
-            component="a"
-            href={previewFile || ''}
-            download
-            variant="contained"
-            color="primary"
-          >
-            Download
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };

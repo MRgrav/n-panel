@@ -41,11 +41,11 @@ export const protectedRoutes = [
     element: <Classes />,
     roles: ['ADMIN', 'Director'],
   },
-  {
-    path: 'master/designations',
-    element: <Designations />,
-    roles: ['ADMIN', 'Director'],
-  },
+  // {
+  //   path: 'master/designations',
+  //   element: <Designations />,
+  //   roles: ['ADMIN', 'Director'],
+  // },
   {
     path: 'employee/',
     element: <CurrentEmployees />,
@@ -61,9 +61,9 @@ export const protectedRoutes = [
     element: <EditEmployee />,
     roles: ['ADMIN', 'Director'],
   },
-  {
-    path: 'ex-employee',
-    element: <ExEmployees />,
-    roles: ['ADMIN', 'Director'],
-  },
+  // {
+  //   path: 'ex-employee',
+  //   element: <ExEmployees />,
+  //   roles: ['ADMIN', 'Director'],
+  // },
 ];

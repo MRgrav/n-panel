@@ -10,6 +10,7 @@ import {
   Avatar,
   Divider,
 } from '@mui/material';
+import { useAuth } from '../../hooks/useAuth';
 
 interface StudentDetailsProps {
   open: boolean;
@@ -19,7 +20,8 @@ interface StudentDetailsProps {
 
 const StudentDetails: React.FC<StudentDetailsProps> = ({ open, student, onClose }) => {
   if (!student) return null;
-
+  const {user} = useAuth()
+  const token = user?.accessToken || '';
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>

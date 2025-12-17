@@ -1,3 +1,4 @@
+// EditStudent.tsx
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -13,8 +14,10 @@ import {
   MenuItem,
   Box,
   Typography,
+  InputAdornment,
 } from '@mui/material';
-import api from '../../../api/api';
+import { put } from '../../../api/api';
+import { useAuth } from '../../../hooks/useAuth';
 
 
 interface EditStudentProps {
@@ -26,38 +29,41 @@ interface EditStudentProps {
 
 const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSave }) => {
   const [loading, setLoading] = useState(false);
+      const {user} = useAuth()
+      const token = user?.accessToken || '';
+    
   const [formData, setFormData] = useState({
-    fullName: '',
+    name: '',
     email: '',
     dateOfBirth: '',
     gender: 'male' as 'male' | 'female' | 'other',
-    previousSchool: '',
+    previousSchoolName: '',
     previousClass: '',
     previousGrade: '',
-    promotedToClass: '',
-    admissionAmount: 0,
+    grade: '',
+    totalAdmissionAmount: 0,
     monthlyFees: 0,
     admissionDate: '',
     admissionReceiptNo: '',
-    status: 'active' as 'active' | 'inactive',
+    admissionReceiptLink: '',
   });
 
   useEffect(() => {
     if (student) {
       setFormData({
-        fullName: student.fullName || '',
+        name: student.name || '',
         email: student.email || '',
-        dateOfBirth: student.dateOfBirth || '',
-        gender: student.gender || 'male',
-        previousSchool: student.previousSchool || '',
+        dateOfBirth: student.dateOfBirth ? student.dateOfBirth.split('T')[0] : '',
+        gender: student.gender?.toLowerCase() || 'male',
+        previousSchoolName: student.previousSchoolName || '',
         previousClass: student.previousClass || '',
         previousGrade: student.previousGrade || '',
-        promotedToClass: student.promotedToClass || '',
-        admissionAmount: student.admissionAmount || 0,
+        grade: student.grade || '',
+        totalAdmissionAmount: student.totalAdmissionAmount || 0,
         monthlyFees: student.monthlyFees || 0,
-        admissionDate: student.admissionDate || '',
+        admissionDate: student.admissionDate ? student.admissionDate.split('T')[0] : '',
         admissionReceiptNo: student.admissionReceiptNo || '',
-        status: student.status || 'active',
+        admissionReceiptLink: student.admissionReceiptLink || '',
       });
     }
   }, [student]);
@@ -67,13 +73,33 @@ const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSav
   };
 
   const handleSubmit = async () => {
+    if (!student?.id) return;
+    
     setLoading(true);
     try {
-      await api.put(`/students/${student.id}`, formData);
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        grade: formData.grade,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1),
+        previousSchoolName: formData.previousSchoolName,
+        previousClass: formData.previousClass,
+        previousGrade: formData.previousGrade,
+        promotedToClass: formData.grade,
+        totalAdmissionAmount: formData.totalAdmissionAmount,
+        monthlyFees: formData.monthlyFees,
+        admissionDate: formData.admissionDate,
+        admissionReceiptNo: formData.admissionReceiptNo,
+        admissionReceiptLink: formData.admissionReceiptLink,
+      };
+
+      await put(`/students/${student.id}`, payload, token);
       onSave();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating student:', error);
+      alert(error.response?.data?.message || 'Error updating student');
     } finally {
       setLoading(false);
     }
@@ -85,7 +111,7 @@ const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSav
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Typography variant="h5" fontWeight="bold">
-          Edit Student - {student?.rollNumber}
+          Edit Student - {student?.rollNo || 'N/A'}
         </Typography>
       </DialogTitle>
       
@@ -95,8 +121,9 @@ const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSav
             <TextField
               fullWidth
               label="Full Name"
-              value={formData.fullName}
-              onChange={(e) => handleChange('fullName', e.target.value)}
+              value={formData.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              required
             />
           </Grid>
           
@@ -107,6 +134,7 @@ const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSav
               type="email"
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
+              required
             />
           </Grid>
           
@@ -140,8 +168,8 @@ const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSav
             <TextField
               fullWidth
               label="Previous School"
-              value={formData.previousSchool}
-              onChange={(e) => handleChange('previousSchool', e.target.value)}
+              value={formData.previousSchoolName}
+              onChange={(e) => handleChange('previousSchoolName', e.target.value)}
             />
           </Grid>
           
@@ -153,6 +181,7 @@ const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSav
                 label="Previous Class"
                 onChange={(e) => handleChange('previousClass', e.target.value)}
               >
+                <MenuItem value="">Select previous class</MenuItem>
                 {classes.map((cls) => (
                   <MenuItem key={cls} value={cls}>{cls}</MenuItem>
                 ))}
@@ -166,16 +195,18 @@ const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSav
               label="Previous Grade"
               value={formData.previousGrade}
               onChange={(e) => handleChange('previousGrade', e.target.value)}
+              placeholder="e.g., A, 95%"
             />
           </Grid>
           
           <Grid item xs={12} sm={6}>
             <FormControl fullWidth>
-              <InputLabel>Promoted To Class</InputLabel>
+              <InputLabel>Current Class</InputLabel>
               <Select
-                value={formData.promotedToClass}
-                label="Promoted To Class"
-                onChange={(e) => handleChange('promotedToClass', e.target.value)}
+                value={formData.grade}
+                label="Current Class"
+                onChange={(e) => handleChange('grade', e.target.value)}
+                required
               >
                 {classes.map((cls) => (
                   <MenuItem key={cls} value={cls}>{cls}</MenuItem>
@@ -185,17 +216,13 @@ const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSav
           </Grid>
           
           <Grid item xs={12} sm={6}>
-            <FormControl fullWidth>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={formData.status}
-                label="Status"
-                onChange={(e) => handleChange('status', e.target.value)}
-              >
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
-              </Select>
-            </FormControl>
+            <TextField
+              fullWidth
+              label="Roll Number"
+              value={student?.rollNo || ''}
+              disabled
+              helperText="Roll number cannot be changed"
+            />
           </Grid>
           
           <Grid item xs={12} sm={6}>
@@ -203,9 +230,9 @@ const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSav
               fullWidth
               label="Admission Amount"
               type="number"
-              value={formData.admissionAmount}
-              onChange={(e) => handleChange('admissionAmount', Number(e.target.value))}
-              InputProps={{ startAdornment: <Typography>₹</Typography> }}
+              value={formData.totalAdmissionAmount}
+              onChange={(e) => handleChange('totalAdmissionAmount', Number(e.target.value))}
+              InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
             />
           </Grid>
           
@@ -216,17 +243,54 @@ const EditStudent: React.FC<EditStudentProps> = ({ open, student, onClose, onSav
               type="number"
               value={formData.monthlyFees}
               onChange={(e) => handleChange('monthlyFees', Number(e.target.value))}
-              InputProps={{ startAdornment: <Typography>₹</Typography> }}
+              InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Admission Date"
+              type="date"
+              value={formData.admissionDate}
+              onChange={(e) => handleChange('admissionDate', e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              label="Admission Receipt No"
+              value={formData.admissionReceiptNo}
+              onChange={(e) => handleChange('admissionReceiptNo', e.target.value)}
+            />
+          </Grid>
+
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Admission Receipt Link"
+              value={formData.admissionReceiptLink}
+              onChange={(e) => handleChange('admissionReceiptLink', e.target.value)}
+              placeholder="https://example.com/receipt.pdf"
             />
           </Grid>
         </Grid>
       </DialogContent>
       
       <DialogActions sx={{ p: 3 }}>
-        <Button onClick={onClose}>Cancel</Button>
-       
+        <Button onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          loading={loading}
+          disabled={!formData.name || !formData.email || !formData.grade}
+        >
           Update Student
-        
+        </Button>
       </DialogActions>
     </Dialog>
   );

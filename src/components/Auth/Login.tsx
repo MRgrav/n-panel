@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { loginFailure, loginStart, loginSuccess } from '../../store/slices/authSlice';
-import api from '../../api/api';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../assets/images/ND_S_w.svg'
+import {REACT_BASE_URL } from '../../api/api';
+import axios from 'axios';
+
 interface User {
  user:{
   id: string;
@@ -109,18 +111,18 @@ const Login = () => {
 
     try {
       dispatch(loginStart());
-      const response = await api.post('auth/login', formData);
+      // const response = await api.post('auth/login', formData);
+      const response = await axios.post(`${REACT_BASE_URL}/auth/login`, formData);
       const user: User = response.data;
       const data = {
         id: user.user.id,
-        email: user.user.email, // Corrected user.email
+        email: user.user.email,
         role: user.user.role,
         accessToken: user.accessToken,
       };
       dispatch(loginSuccess(data));
       
-      // Redirect to dashboard after successful login
-      navigate('/dashboard'); // Add the route to your dashboard
+      navigate('/dashboard'); 
 
     } catch (err: any) {
       dispatch(loginFailure());

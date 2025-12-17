@@ -75,6 +75,7 @@ const Designations: React.FC = () => {
         onEdit={handleEdit}
         onDelete={handleDelete}
         searchPlaceholder="Search designations..."
+        showSerialNo={true}
       />
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
