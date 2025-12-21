@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { loginFailure, loginStart, loginSuccess } from '../../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../assets/images/ND_S_w.svg'
+import logo2 from '../../assets/images/NIT ADESK.svg'
 import {REACT_BASE_URL } from '../../api/api';
 import axios from 'axios';
 
@@ -138,13 +139,13 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      <div className="flex-1 bg-gradient-to-br from-gray-700 to-[#04354B] text-white flex flex-col justify-center items-center px-8 py-12">
+      <div className="flex-1 bg-[#575FFE] text-white flex flex-col justify-center items-center px-8 py-12">
         <div className="max-w-md text-center">
           <h2 className="text-3xl font-bold mb-6">Welcome to</h2>
           <div className="mb-8">
             <img 
-              className="max-w-96 mx-auto" 
-              src={logo}
+              className="max-w mx-auto" 
+              src={logo2}
               alt="NaviaDesk Logo" 
             />
           </div>

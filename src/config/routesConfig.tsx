@@ -1,3 +1,4 @@
+import Attendance from "../pages/attendance/Attendance";
 import Dashboard from "../pages/Dashboard";
 import AddEmployee from "../pages/employee/AddEmployee";
 import CurrentEmployees from "../pages/employee/CurrentEmployees";
@@ -61,9 +62,9 @@ export const protectedRoutes = [
     element: <EditEmployee />,
     roles: ['ADMIN', 'Director'],
   },
-  // {
-  //   path: 'ex-employee',
-  //   element: <ExEmployees />,
-  //   roles: ['ADMIN', 'Director'],
-  // },
+  {
+    path: 'attendance',
+    element: <Attendance />,
+    roles: ['ADMIN', 'Teacher'],
+  },
 ];

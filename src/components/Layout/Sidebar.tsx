@@ -37,7 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
  import logo from '../../assets/images/ND_S_w.svg'
-import { Timer } from 'lucide-react';
+import { Calendar, Timer } from 'lucide-react';
 
 const drawerWidth = 280;
 
@@ -59,8 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onMobileToggle })
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, canAccessMaster, canAccessEmployee, canManagePolicies, canManageLeads } = useAuth();
-  
+  const { user, canAccessMaster, canAccessEmployee,  } = useAuth();
   const [masterOpen, setMasterOpen] = useState(false);
   const [employeeOpen, setEmployeeOpen] = useState(false);
 
@@ -132,9 +131,9 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onMobileToggle })
       show: true,
     },
     {
-      text: 'Fees',
-      icon: <Payment />,
-      path: '/fees',
+      text: 'Attendance',
+      icon: <Calendar />,
+      path: '/attendance',
       show: true,
     },
 
@@ -340,3 +339,6 @@ const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onMobileToggle })
 };
 
 export default Sidebar;
+
+
+

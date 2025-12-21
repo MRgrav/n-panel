@@ -21,11 +21,11 @@ const request = async <T>(
     const response: AxiosResponse<T> = await api({
       method,
       url,
-      data: method.toLowerCase() === 'delete' ? undefined : data, // Don't send data for DELETE
-      params: params, // Add params for all methods
+      data: method.toLowerCase() === 'delete' ? undefined : data,
+      params: params, 
       headers: {
         Authorization: token ? `Bearer ${token}` : '',  
-        ...(method.toLowerCase() === 'delete' ? { 'Content-Type': undefined } : {}), // Remove content-type for DELETE
+        ...(method.toLowerCase() === 'delete' ? { 'Content-Type': undefined } : {}),
       },
     });
     return response.data;
