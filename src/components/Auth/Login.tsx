@@ -3,7 +3,7 @@ import { useDispatch } from 'react-redux';
 import { loginFailure, loginStart, loginSuccess } from '../../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../assets/images/ND_S_w.svg'
-import logo2 from '../../assets/images/NIT ADESK.svg'
+import logo2 from '../../assets/images/Slice 3.svg'
 import {REACT_BASE_URL } from '../../api/api';
 import axios from 'axios';
 
@@ -98,43 +98,47 @@ const Login = () => {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+// components/Auth/Login.tsx (partial update)
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  setTouched({ email: true, password: true });
+  
+  if (!validateForm()) {
+    return;
+  }
+
+  setIsSubmitting(true);
+  setErrors(prev => ({ ...prev, general: '' }));
+
+  try {
+    dispatch(loginStart());
+    const response = await axios.post(`${REACT_BASE_URL}auth/login`, formData);
+    const user: User = response.data;
     
-    setTouched({ email: true, password: true });
+    const userData = {
+      id: user.user.id,
+      email: user.user.email,
+      role: user.user.role,
+      accessToken: user.accessToken,
+    };
     
-    if (!validateForm()) {
-      return;
-    }
+    dispatch(loginSuccess({ 
+      user: userData, 
+      refreshToken: user.refreshToken 
+    }));
+    
+    navigate('/dashboard'); 
 
-    setIsSubmitting(true);
-    setErrors(prev => ({ ...prev, general: '' }));
-
-    try {
-      dispatch(loginStart());
-      // const response = await api.post('auth/login', formData);
-      const response = await axios.post(`${REACT_BASE_URL}/auth/login`, formData);
-      const user: User = response.data;
-      const data = {
-        id: user.user.id,
-        email: user.user.email,
-        role: user.user.role,
-        accessToken: user.accessToken,
-      };
-      dispatch(loginSuccess(data));
-      
-      navigate('/dashboard'); 
-
-    } catch (err: any) {
-      dispatch(loginFailure());
-      setErrors({
-        general: err?.response?.data?.message || 'Login failed. Please check your credentials and try again.',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  } catch (err: any) {
+    dispatch(loginFailure());
+    setErrors({
+      general: err?.response?.data?.message || 'Login failed. Please check your credentials and try again.',
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
 
   return (
@@ -292,7 +296,7 @@ const Login = () => {
                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
                   ${isSubmitting 
                     ? 'bg-blue-400 cursor-not-allowed' 
-                    : 'bg-gradient-to-br from-[#04354B] to-gray-600 hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5'
+                    : 'bg-[#575FFE] hover:bg-blue-500 hover:shadow-lg transform hover:-translate-y-0.5'
                   }
                 `}
               >

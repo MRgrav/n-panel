@@ -360,13 +360,15 @@ const Header: React.FC<HeaderProps> = ({ onMobileMenuToggle }) => {
   return (
     <>
       <AppBar
-        className="bg-gradient-to-br from-gray-700 to-[#04354B]"
+        className="bg-#575FFE"
         position="fixed"
         sx={{
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
           boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
           backdropFilter: 'blur(10px)',
+          // bgcolor: '##575FFE', //not working
+          backgroundColor: '#575FFE',
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
